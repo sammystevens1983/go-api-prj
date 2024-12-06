@@ -6,19 +6,26 @@ package main
 #include "/workspaces/go-api-demo/src/c_sqr/mylib.h"
 */
 import "C"
+
 import (
-	"bufio"
-	"fmt"
-	"os"
-	"strconv"
-	"strings"
+	"bufio"                // Used for reading input from the user
+	"fmt"                  // Provides formatted I/O functions
+	"go-api-prj/src/utils" // Imports utility functions for file streaming and string modification
+	"os"                   // Provides operating system functions like file handling
+	"strconv"              // Provides functions to convert strings to integers
+	"strings"              // Provides string manipulation utilities
 )
 
 func main() {
-    var loadedString *[]byte
+	// `loadedString` is a pointer to a byte slice that stores the string for the "Load and Modify String in Memory" option.
+	var loadedString *[]byte
 
+	// `reader` is used to read user input from the console.
 	reader := bufio.NewReader(os.Stdin)
+
+	// Main program loop that displays a menu and processes user input.
 	for {
+		// Display the menu options
 		fmt.Println("\nMenu:")
 		fmt.Println("1. Print Hello, World!")
 		fmt.Println("2. Call C Library to Square a Number")
@@ -27,119 +34,55 @@ func main() {
 		fmt.Println("5. Exit")
 		fmt.Print("Enter your choice: ")
 
+		// Read user input and trim any whitespace
 		input, _ := reader.ReadString('\n')
-		choice, err := strconv.Atoi(strings.TrimSpace(input))
+		choice, err := strconv.Atoi(strings.TrimSpace(input)) // Convert input to an integer
 		if err != nil || (choice < 1 || choice > 5) {
+			// Handle invalid input
 			fmt.Println("Invalid choice. Please enter a valid option.")
 			continue
 		}
 
+		// Handle menu options based on user input
 		switch choice {
 		case 1:
+			// Option 1: Print a simple greeting
 			fmt.Println("Hello, World!")
 		case 2:
-			fmt.Print("Enter a number to square: ")
-			numInput, _ := reader.ReadString('\n')
-			num, err := strconv.Atoi(strings.TrimSpace(numInput))
-			if err != nil {
-				fmt.Println("Invalid input. Please enter an integer.")
-				continue
-			}
-
-			// Call the C function
-			result := C.square(C.int(num))
-			fmt.Printf("The square of %d is %d.\n", num, int(result))
+			// Option 2: Call the C library function to square a number
+			callCSquareFunction()
 		case 3:
-			simulateFileStreaming()
+			// Option 3: Simulate receiving and reconstructing a large file
+			// `SimulateFileStreaming` takes the chunk size, total size, and file path as arguments.
+			utils.SimulateFileStreaming(1024, 10*1024*1024, "received_large_file.txt")
 		case 4:
-            loadedString = loadAndModifyString(loadedString)
+			// Option 4: Load a string into memory and allow modifications
+			// This function uses the `loadedString` variable to track the string state.
+			loadedString = utils.LoadAndModifyString(loadedString)
 		case 5:
+			// Option 5: Exit the program
 			fmt.Println("Exiting...")
 			return
 		}
 	}
 }
 
-func simulateFileStreaming() {
-	const chunkSize = 1024 // Simulated chunk size in bytes
-	const totalSize = 10 * 1024 * 1024 // Simulated total file size: 10 MB
-	filePath := "received_large_file.txt"
+// callCSquareFunction handles user input, calls the C library's `square` function, and displays the result.
+func callCSquareFunction() {
+	// `reader` is used to read the number input from the user.
+	reader := bufio.NewReader(os.Stdin)
+	fmt.Print("Enter a number to square: ")
 
-	fmt.Println("Simulating receiving a large file...")
-
-	// Open the file for writing
-	file, err := os.Create(filePath)
+	// Read and parse the input number
+	numInput, _ := reader.ReadString('\n')
+	num, err := strconv.Atoi(strings.TrimSpace(numInput))
 	if err != nil {
-		fmt.Printf("Error creating file: %v\n", err)
+		// Handle invalid input
+		fmt.Println("Invalid input. Please enter an integer.")
 		return
 	}
-	defer file.Close()
 
-	receivedSize := 0
-	for receivedSize < totalSize {
-		// Simulate receiving a chunk
-		chunk := strings.Repeat("A", chunkSize)
-		_, err := file.WriteString(chunk)
-		if err != nil {
-			fmt.Printf("Error writing to file: %v\n", err)
-			return
-		}
-		receivedSize += chunkSize
-		fmt.Printf("\rReceived %d / %d bytes", receivedSize, totalSize)
-	}
-
-	fmt.Println("\nFile reconstructed successfully!")
-	fmt.Printf("File saved to: %s\n", filePath)
+	// Call the `square` function from the C library
+	result := C.square(C.int(num)) // Convert the Go integer to a C integer
+	fmt.Printf("The square of %d is %d.\n", num, int(result))
 }
-
-func loadAndModifyString(currentBytes *[]byte) *[]byte {
-	reader := bufio.NewReader(os.Stdin)
-
-	if currentBytes == nil {
-		// Load the string into memory as a byte slice
-		str := "BascomHunter"
-		bytes := []byte(str)
-		currentBytes = &bytes
-	}
-
-	fmt.Printf("Current string in memory: %s\n", string(*currentBytes))
-
-	// Display hex values
-	fmt.Print("Hex values in memory: ")
-	for _, b := range *currentBytes {
-		fmt.Printf("%02X ", b)
-	}
-	fmt.Println()
-
-	// Prompt the user to modify a byte
-	fmt.Print("Enter index to modify (0-based): ")
-	indexInput, _ := reader.ReadString('\n')
-	index, err := strconv.Atoi(strings.TrimSpace(indexInput))
-	if err != nil || index < 0 || index >= len(*currentBytes) {
-		fmt.Println("Invalid index.")
-		return currentBytes
-	}
-
-	fmt.Print("Enter new hex value (e.g., 41 for 'A'): ")
-	hexInput, _ := reader.ReadString('\n')
-	newByte, err := strconv.ParseUint(strings.TrimSpace(hexInput), 16, 8)
-	if err != nil {
-		fmt.Println("Invalid hex value.")
-		return currentBytes
-	}
-
-	// Modify the byte slice
-	(*currentBytes)[index] = byte(newByte)
-
-	// Display the modified hex values
-	fmt.Print("Modified hex values in memory: ")
-	for _, b := range *currentBytes {
-		fmt.Printf("%02X ", b)
-	}
-	fmt.Println()
-
-	fmt.Printf("Modified string in memory: %s\n", string(*currentBytes))
-
-	return currentBytes
-}
-
