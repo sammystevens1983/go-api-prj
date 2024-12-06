@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"bufio"
 	"fmt"     // Provides formatted I/O functions
 	"os"      // Provides operating system functions for file handling
 	"strings" // Provides utilities for manipulating and repeating strings
@@ -22,31 +23,50 @@ func SimulateFileStreaming(chunkSize, totalSize int, filePath string) {
 	// Open the file for writing, creating it if it doesn't exist
 	file, err := os.Create(filePath)
 	if err != nil {
-		// Handle file creation errors
 		fmt.Printf("Error creating file: %v\n", err)
 		return
 	}
-	// Ensure the file is closed when the function exits
 	defer file.Close()
+
+	// Use a buffered writer for efficient file writing
+	bufferedWriter := bufio.NewWriter(file)
+
+	// Pre-generate a single chunk of data
+	chunk := strings.Repeat("A", chunkSize)
 
 	receivedSize := 0 // Tracks the total bytes received and written
 	for receivedSize < totalSize {
-		// Generate a chunk of data to simulate receiving a file
-		chunk := strings.Repeat("A", chunkSize) // Repeat 'A' to fill the chunk
-		_, err := file.WriteString(chunk)       // Write the chunk to the file
+		remaining := totalSize - receivedSize
+		// Write the remaining chunk size or the full chunk, whichever is smaller
+		toWrite := chunk
+		if remaining < chunkSize {
+			toWrite = strings.Repeat("A", remaining)
+		}
+
+		_, err := bufferedWriter.WriteString(toWrite)
 		if err != nil {
-			// Handle file writing errors
 			fmt.Printf("Error writing to file: %v\n", err)
 			return
 		}
-		receivedSize += chunkSize // Update the total bytes received
-		// Display progress to the user
-		fmt.Printf("\rReceived %d / %d bytes", receivedSize, totalSize)
+		receivedSize += len(toWrite)
+
+		// Print progress less frequently (e.g., every 5%)
+		if receivedSize%int(float64(totalSize)*0.05) == 0 || receivedSize == totalSize {
+			fmt.Printf("\rReceived %d / %d bytes", receivedSize, totalSize)
+		}
+	}
+
+	// Flush any remaining data in the buffer
+	err = bufferedWriter.Flush()
+	if err != nil {
+		fmt.Printf("Error flushing buffer: %v\n", err)
+		return
 	}
 
 	fmt.Println("\nFile reconstructed successfully!")
 	fmt.Printf("File saved to: %s\n", filePath)
 }
+
 
 // LoadAndModifyString loads a string into memory (if not already loaded) and allows
 // modification of its contents directly in memory.
