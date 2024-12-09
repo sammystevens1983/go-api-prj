@@ -2,22 +2,60 @@ package main
 
 /*
 #cgo CFLAGS: -I/tmp/c_sqr
-#cgo LDFLAGS: -L/tmp/c_sqr -lc_sqr_lib
+#cgo LDFLAGS: -L/tmp/c_sqr -lc_sqr_lib -Wl,-rpath,/tmp/c_sqr
 #include "/tmp/c_sqr/mylib.h"
 */
 import "C"
 
 import (
 	"bufio"
+	"embed"
 	"encoding/json"
 	"fmt"
-	"go-api-prj/src/utils"
+	"go-api-prj/src/api/utils"
 	"io"
 	"net/http"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 )
+
+//go:embed c_sqr/*
+var embeddedCFiles embed.FS
+func extractEmbeddedCFiles() error {
+	// Define the temporary directory
+	tempDir := "/tmp/c_sqr"
+
+	// Ensure the directory exists
+	err := os.MkdirAll(tempDir, os.ModePerm)
+	if err != nil {
+		return fmt.Errorf("failed to create temp directory: %v", err)
+	}
+
+	// Extract the header file
+    headerContent, err := embeddedCFiles.ReadFile("../c_sqr/mylib.h")
+    if err != nil {
+        return fmt.Errorf("failed to read embedded header file: %v", err)
+    }
+    err = os.WriteFile(filepath.Join(tempDir, "mylib.h"), headerContent, os.ModePerm)
+    if err != nil {
+        return fmt.Errorf("failed to write header file: %v", err)
+    }
+    
+    libContent, err := embeddedCFiles.ReadFile("../c_sqr/libc_sqr_lib.so")
+    if err != nil {
+        return fmt.Errorf("failed to read embedded library file: %v", err)
+    }
+    err = os.WriteFile(filepath.Join(tempDir, "libc_sqr_lib.so"), libContent, os.ModePerm)
+    if err != nil {
+        return fmt.Errorf("failed to write library file: %v", err)
+    }
+    
+
+	return nil
+}
+
 
 // JSON handler function for writing data to a file
 func jsonHandler(w http.ResponseWriter, r *http.Request) {
@@ -126,6 +164,18 @@ func fileUploadHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
+	// Extract embedded C files before using them
+    // Print embedded files for debugging
+    entries, err := embeddedCFiles.ReadDir("c_sqr")
+    if err != nil {
+        fmt.Printf("Error reading embedded directory: %v\n", err)
+        os.Exit(1)
+    }
+    fmt.Println("Embedded files:")
+    for _, entry := range entries {
+        fmt.Println(entry.Name())
+    }
+    
     // Print the PID of the program at startup
 	fmt.Printf("Program is running with PID: %d\n", os.Getpid())
 
