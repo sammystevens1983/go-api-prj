@@ -1,9 +1,9 @@
 package main
 
 /*
-#cgo CFLAGS: -I/workspaces/go-api-demo/src/c_sqr
-#cgo LDFLAGS: -L/workspaces/go-api-demo/src/c_sqr -lc_sqr_lib
-#include "/workspaces/go-api-demo/src/c_sqr/mylib.h"
+#cgo CFLAGS: -I/tmp/c_sqr
+#cgo LDFLAGS: -L/tmp/c_sqr -lc_sqr_lib
+#include "/tmp/c_sqr/mylib.h"
 */
 import "C"
 
