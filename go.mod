@@ -1,3 +1,3 @@
-module go-api-prj
+module fibbench
 
 go 1.21.0
